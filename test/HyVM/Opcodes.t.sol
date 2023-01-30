@@ -1206,4 +1206,28 @@ contract OpcodesTest is Test {
         (bool success, ) = hyvm.call(bytecode);
         assertTrue(success, "expectRevert: call did not revert");
     }
+
+    function testCannotCallcodeInCallContext() public {
+        // It is the same test as testCallcode.
+        // Only difference is the call to the HyVM instead of a delegatecall.
+        // The bytecode itself contains a callcode that should revert
+        // as it should not be possible to do a callcode in the context of a
+        // call to the HyVM. It is not possible to test the specific case of
+        // selfdestruct as it is not supported by foundry
+        // https://github.com/foundry-rs/foundry/issues/2844
+        address calldatacontract;
+        assembly {
+            // use scratch space
+            mstore(0, 0x67600054600757FE5B60005260086018F3) // see opcodes/contracts/callcodeContract
+            calldatacontract := create(0, 15, 17)
+        }
+        // bytecode generated using: easm test/opcodes/callcode
+        bytes memory bytecode =
+            hex"60016000556000600060006000600073123123123123123123123123123123123123123161fffff260005260ff6000f3";
+        // we replace the dummy address with actual contract address
+        bytecode = Utils.replace(bytecode, 0x1231231231231231231231231231231231231231, calldatacontract);
+        vm.expectRevert();
+        (bool success, ) = hyvm.call(bytecode);
+        assertTrue(success, "expectRevert: call did not revert");
+    }
 }
